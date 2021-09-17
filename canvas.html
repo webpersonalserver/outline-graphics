@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSS转盘抽奖</title>
-    <link rel="stylesheet" href="./static/index.css">
+    <title>canvas转盘抽奖</title>
+    <link rel="stylesheet" href="./static/canvas.css">
     <script type="text/javascript" src="./static/jquery-3.6.0.min.js"></script>
-    <script type="text/javascript" src="./static/index.js"></script>
+    <script type="text/javascript" src="./static/canvas.js"></script>
   </head>
   <body>
-    <div class="app">
-      <div class="box"></div>
+    <div class="canvas-outer">
+      <div class="canvas-inner">
+        <canvas id="turntable" width="600" height="600"></canvas>
+      </div>
       <div class="pointer"></div>
     </div>
   </body>
