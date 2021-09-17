@@ -19,11 +19,6 @@ $(function () {
       bgColor: '#AEEEEE',
       message: '恭喜您获得三等奖'
     }, {
-      level: 1,
-      angle: 60,
-      bgColor: '#EE8262',
-      message: '恭喜您获得一等奖'
-    }, {
       level: 2,
       angle: 60,
       bgColor: '#EE7600',
@@ -33,6 +28,11 @@ $(function () {
       angle: 60,
       bgColor: '#AEEEEE',
       message: '恭喜您获得三等奖'
+    }, {
+      level: 0,
+      angle: 60,
+      bgColor: '#FFFFFF',
+      message: '谢谢参与'
     }]
   }
   // 旋转动画定时器
@@ -45,22 +45,21 @@ $(function () {
     const { radius, data = [] } = config
     const canvas = document.getElementById('turntable')
     const ctx = canvas.getContext('2d')
-    let sAngle = 1
+    let sAngle = 0
 
     // 绘制转盘圆形区域
     ctx.beginPath()
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0)'
     ctx.arc(radius, radius, radius, 0, 2 * Math.PI, false)
-    ctx.stroke()
 
     // 绘制转盘数据
-    data.forEach(({ angle, bgColor }) => {
+    data.forEach(({ angle, bgColor, level }) => {
       sAngle = drawSector({
         ctx,
         angle,
         bgColor,
         radius,
-        sAngle
+        sAngle,
+        level
       })
     })
   }
@@ -70,22 +69,58 @@ $(function () {
     angle,
     bgColor,
     radius,
-    sAngle
+    sAngle,
+    level
   }) {
+    // 圆心X轴
+    const x = radius
+    // 文字的Y轴坐标
+    const y = radius
+    // 设置文字
+    const text = ['谢谢参与', '一等奖', '二等奖', '三等奖'][level]
+    // 文字半径
+    const textRadius = radius * 3 / 4
+    // 文字开始弧度
+    const textStartRadian = (sAngle + angle / 360) * Math.PI
+
+    // 保存之前绘制
+    ctx.save()
     // 开始绘制
     ctx.beginPath()
     // 绘制指定角度的圆弧
-    ctx.arc(radius, radius, radius, sAngle * Math.PI, Math.PI * (sAngle + angle / 180), false)
+    ctx.arc(x, y, radius, sAngle * Math.PI, Math.PI * (sAngle + angle / 180), false)
     // 移动笔触到圆心
-    ctx.lineTo(radius, radius)
+    ctx.lineTo(x, y)
     // 闭合路劲
     ctx.closePath()
     // 设置扇形填充色
     ctx.fillStyle = bgColor
     // 填充背景色
     ctx.fill()
+    // 重置绘制角度
+    ctx.restore()
+
     // 保存绘制
     ctx.save()
+    // 绘制文本
+    ctx.beginPath()
+    // 文字字体
+    ctx.font = "24px Microsoft YaHei"
+    // 文字样色
+    ctx.fillStyle = "#666666";
+    // 水平对齐方式
+    ctx.textAlign = "center"
+    // 垂直对齐方式
+    ctx.textBaseline = "middle"
+    // 设置文字旋转中心点
+    ctx.translate(x + Math.cos(textStartRadian) * textRadius, y + Math.sin(textStartRadian) * textRadius)
+    // // 设置文字旋转角度
+    ctx.rotate(Math.PI / 2 + textStartRadian)
+    // 填充文字
+    ctx.fillText(text, 0, 0)
+    // 重置绘制角度
+    ctx.restore()
+    
     // 返回下次绘制的起始角
     return sAngle + angle / 180
   }
@@ -109,14 +144,18 @@ $(function () {
   function getLotteryRes () {
     const remainder = angleAmount % 360
     const { data = [] } = config
+    // 获奖角度
+    let awardPoint = 270
+    // 角度总和
     let amount = 0
-    let keyPoint = 270
+    // 开始角度
+    let startPoint = 0
     let res = ''
 
     for (let i = 0; i < data.length; i++) {
       let { angle, message } = data[i]
-      let min = keyPoint + amount + remainder
-      let max = keyPoint + angle + amount + remainder
+      let min = startPoint + amount + remainder
+      let max = startPoint + angle + amount + remainder
 
       if (min >= 360) {
         min = min % 360
@@ -125,7 +164,8 @@ $(function () {
         max = max % 360
       }
 
-      if (max <= min) {
+      if ((max >= min && min <= awardPoint && max >= awardPoint)
+        || (max < min && min <= awardPoint)) {
         res = message
         break
       } else {
