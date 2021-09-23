@@ -1,181 +1,121 @@
 $(function () {
   const config = {
-    // 半径
-    radius: 300,
-    // 转盘数据
-    data: [{
-      level: 1,
-      angle: 60,
-      bgColor: '#EE8262',
-      message: '恭喜您获得一等奖'
-    }, {
-      level: 2,
-      angle: 60,
-      bgColor: '#EE7600',
-      message: '恭喜您获得二等奖'
-    }, {
-      level: 3,
-      angle: 60,
-      bgColor: '#AEEEEE',
-      message: '恭喜您获得三等奖'
-    }, {
-      level: 2,
-      angle: 60,
-      bgColor: '#EE7600',
-      message: '恭喜您获得二等奖'
-    }, {
-      level: 3,
-      angle: 60,
-      bgColor: '#AEEEEE',
-      message: '恭喜您获得三等奖'
-    }, {
-      level: 0,
-      angle: 60,
-      bgColor: '#FFFFFF',
-      message: '谢谢参与'
-    }]
+    w: 800,
+    h: 800
   }
-  // 旋转动画定时器
-  let timer
-  // 当下转盘旋转的总角度
-  let angleAmount = 0
 
-  // 渲染转盘
-  function render () {
-    const { radius, data = [] } = config
-    const canvas = document.getElementById('turntable')
+  // 渲染
+  async function render () {
+    const { w, h } = config
+    const canvas = document.getElementById('graphics')
     const ctx = canvas.getContext('2d')
-    let sAngle = 0
 
-    // 绘制转盘圆形区域
-    ctx.beginPath()
-    ctx.arc(radius, radius, radius, 0, 2 * Math.PI, false)
+    // 设置画布宽高
+    canvas.width = w
+    canvas.height = h
 
-    // 绘制转盘数据
-    data.forEach(({ angle, bgColor, level }) => {
-      sAngle = drawSector({
-        ctx,
-        angle,
-        bgColor,
-        radius,
-        sAngle,
-        level
-      })
-    })
+    // 绘制图片，图片建议为在线地址，不然浏览器会报跨域错误
+    await drawImage({ ctx, imageUrl: 'static/images/cow.png' })
   }
-  // 绘制指定角度的扇形
-  function drawSector ({
+  // 绘制图片
+  async function drawImage ({
     ctx,
-    angle,
-    bgColor,
-    radius,
-    sAngle,
-    level
+    imageUrl = ''
   }) {
-    // 圆心X轴
-    const x = radius
-    // 文字的Y轴坐标
-    const y = radius
-    // 设置文字
-    const text = ['谢谢参与', '一等奖', '二等奖', '三等奖'][level]
-    // 文字半径
-    const textRadius = radius * 3 / 4
-    // 文字开始弧度
-    const textStartRadian = (sAngle + angle / 360) * Math.PI
+    if (!imageUrl) return
 
-    // 保存之前绘制
-    ctx.save()
-    // 开始绘制
-    ctx.beginPath()
-    // 绘制指定角度的圆弧
-    ctx.arc(x, y, radius, sAngle * Math.PI, Math.PI * (sAngle + angle / 180), false)
-    // 移动笔触到圆心
-    ctx.lineTo(x, y)
-    // 闭合路劲
-    ctx.closePath()
-    // 设置扇形填充色
-    ctx.fillStyle = bgColor
-    // 填充背景色
-    ctx.fill()
-    // 重置绘制角度
-    ctx.restore()
+    const imageObj = new Image()
 
-    // 保存绘制
-    ctx.save()
-    // 绘制文本
-    ctx.beginPath()
-    // 文字字体
-    ctx.font = "24px Microsoft YaHei"
-    // 文字样色
-    ctx.fillStyle = "#666666";
-    // 水平对齐方式
-    ctx.textAlign = "center"
-    // 垂直对齐方式
-    ctx.textBaseline = "middle"
-    // 设置文字旋转中心点
-    ctx.translate(x + Math.cos(textStartRadian) * textRadius, y + Math.sin(textStartRadian) * textRadius)
-    // // 设置文字旋转角度
-    ctx.rotate(Math.PI / 2 + textStartRadian)
-    // 填充文字
-    ctx.fillText(text, 0, 0)
-    // 重置绘制角度
-    ctx.restore()
-    
-    // 返回下次绘制的起始角
-    return sAngle + angle / 180
-  }
-  // 事件监听
-  function eventMonitoring () {
-    $('.pointer').click(function () {
-      if (timer) return
+    imageObj.src = imageUrl
+    await new Promise(resolve => {
+      imageObj.onload = () => {
+        const { width, height } = imageObj
+        const { w, h } = config
+        const x = (w - width) / 2
+        const y = (h - height) / 2
 
-      const rotate = Math.floor(Math.random() * 360) + 10800 + angleAmount
-      angleAmount = rotate
-
-      $('#turntable').css({ transform: `rotate(${rotate}deg)` })
-      timer = setTimeout(() => {
-        getLotteryRes()
-        clearTimeout(timer)
-        timer = null
-      }, 10000)
+        // 绘制图片
+        ctx.drawImage(imageObj, x, y, width, height)
+        // 获取图片像素颜色
+        const imageColor = getImageColor({
+          ctx,
+          x,
+          y,
+          width,
+          height
+        })
+        resolve()
+      }
     })
   }
-  // 判断最后抽奖结果
-  function getLotteryRes () {
-    const remainder = angleAmount % 360
-    const { data = [] } = config
-    // 获奖角度
-    let awardPoint = 270
-    // 角度总和
-    let amount = 0
-    // 开始角度
-    let startPoint = 0
-    let res = ''
+  // 获取图片每个坐标点的颜色
+  function getImageColor ({ ctx, x, y, width, height }) {
+    const contour = []
 
-    for (let i = 0; i < data.length; i++) {
-      let { angle, message } = data[i]
-      let min = startPoint + amount + remainder
-      let max = startPoint + angle + amount + remainder
-
-      if (min >= 360) {
-        min = min % 360
-      }
-      if (max >= 360) {
-        max = max % 360
-      }
-
-      if ((max >= min && min <= awardPoint && max >= awardPoint)
-        || (max < min && min <= awardPoint)) {
-        res = message
-        break
-      } else {
-        amount += angle
+    for (let i = x; i < x + width; i++) {
+      for (let j = y; j < y + height; j++) {
+        const { data: [r, g, b, alpha] } = ctx.getImageData(i, j, 1, 1)
+        
+        if (r === 135 && g === 206 && b === 255) {
+          contour.push({
+            x: i,
+            y: j
+          })
+        }
       }
     }
 
-    alert(res)
+    // 清除图片
+    // ctx.clearRect(x, y, width, height)
+    // 在图片有效区域内填充内容
+    fillContent({
+      ctx,
+      coordinate: contour
+    })
+  }
+  // 在指定坐标区域内，填充数字
+  function fillContent ({ ctx, coordinate, x, y }) {
+    // 填充的数量
+    const count = 200
+    const renderText = []
+
+    for (let i = 0; i < count; i++) {
+      // 随机填充数字
+      let num = randomCoordinate(1, 100)
+      // 随机旋转角度
+      let rotate = randomCoordinate(0, 2, true) * Math.PI
+      let index = randomCoordinate(0, coordinate.length - 1)
+      let posX = coordinate[index].x
+      let posY = coordinate[index].y
+      let color = `#${Math.random().toString(16).substr(-6)}`
+
+      ctx.save()
+      // 文字字体
+      ctx.font = "24px Microsoft YaHei"
+      // 文字样色
+      ctx.fillStyle = color;
+      // 水平对齐方式
+      ctx.textAlign = "center"
+      // 垂直对齐方式
+      ctx.textBaseline = "middle"
+      // 设置文字旋转中心坐标
+      ctx.translate(posX, posY)
+      // 设置文字旋转角度
+      ctx.rotate(rotate)
+      // 绘制文字
+      ctx.fillText(num, 0, 0)
+      ctx.restore()
+      renderText.push(coordinate[index])
+    }
+  }
+  // 生成随机数
+  function randomCoordinate (min, max, status) {
+    if (status) {
+      return Math.random() * (max - min) + min
+    } else {
+      return Math.floor(Math.random() * (max - min) ) + min
+    }
   }
 
   render()
-  eventMonitoring()
 })
